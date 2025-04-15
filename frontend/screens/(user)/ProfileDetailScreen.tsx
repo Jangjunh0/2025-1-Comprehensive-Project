@@ -20,7 +20,10 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import BackButton from "@/common/BackButton";
 import { toKoreanGender, toEnglishGender } from "@/utils/gender";
 
-
+import DiseaseSelectModal from "@/modals/disease-select.modal";
+import MedicationSelectModal from "@/modals/medication-select.modal";
+import { fetchAllDiseases } from "@/services/disease.api";
+import { fetchAllMedications } from "@/services/medication.api";
 
 export default function ProfileDetailScreen() {
     const router = useRouter();
@@ -57,6 +60,19 @@ export default function ProfileDetailScreen() {
             });
         }
     }, [profile]);
+
+    // ✅ 질병/약물 리스트 가져오기
+    const { data: diseaseList = [], isLoading: isDiseaseLoading } = useQuery({
+        queryKey: ["diseases"],
+        queryFn: fetchAllDiseases,
+    });
+    const { data: medicationList = [], isLoading: isMedicationLoading } = useQuery({
+        queryKey: ["medications"],
+        queryFn: fetchAllMedications,
+    });
+
+    const [diseaseModalOpen, setDiseaseModalOpen] = useState(false);
+    const [medicationModalOpen, setMedicationModalOpen] = useState(false);
 
     // ✅ 서버에 수정사항 저장
     const mutation = useMutation({
@@ -97,7 +113,6 @@ export default function ProfileDetailScreen() {
 
     return (
         <View style={styles.root}>
-            {/* 🔙 뒤로가기 */}
             <BackButton style={{ position: "absolute", top: 20, left: 16, zIndex: 10 }} />
 
             <ScrollView
@@ -142,8 +157,14 @@ export default function ProfileDetailScreen() {
                             label={item.label}
                             value={editableProfile[item.key as keyof typeof editableProfile]}
                             editable={editField === item.key}
-                            onEdit={() => setEditField(item.key)}
-                            onChange={(v) => handleChange(item.key as keyof typeof editableProfile, v)}
+                            onEdit={() => {
+                                if (item.key === "diseases") return setDiseaseModalOpen(true);
+                                if (item.key === "medications") return setMedicationModalOpen(true);
+                                setEditField(item.key);
+                            }}
+                            onChange={(v) =>
+                                handleChange(item.key as keyof typeof editableProfile, v)
+                            }
                             onBlur={() => setEditField(null)}
                         />
                     ))}
@@ -153,6 +174,44 @@ export default function ProfileDetailScreen() {
                     <Text style={styles.saveText}>저장</Text>
                 </TouchableOpacity>
             </ScrollView>
+
+            {/* 지병 모달 */}
+            <DiseaseSelectModal
+                visible={diseaseModalOpen}
+                selected={editableProfile.diseases
+                    .split(",")
+                    .map((d) => d.trim())
+                    .filter(Boolean)}
+                diseaseList={diseaseList}
+                isLoading={isDiseaseLoading}
+                onClose={() => setDiseaseModalOpen(false)}
+                onSave={(items) => {
+                    setEditableProfile((prev) => ({
+                        ...prev,
+                        diseases: items.join(", "),
+                    }));
+                    setDiseaseModalOpen(false);
+                }}
+            />
+
+            {/* 약물 모달 */}
+            <MedicationSelectModal
+                visible={medicationModalOpen}
+                selected={editableProfile.medications
+                    .split(",")
+                    .map((m) => m.trim())
+                    .filter(Boolean)}
+                medicationList={medicationList}
+                isLoading={isMedicationLoading}
+                onClose={() => setMedicationModalOpen(false)}
+                onSave={(items) => {
+                    setEditableProfile((prev) => ({
+                        ...prev,
+                        medications: items.join(", "),
+                    }));
+                    setMedicationModalOpen(false);
+                }}
+            />
         </View>
     );
 }
@@ -173,12 +232,18 @@ function EditableText({
     onChange: (text: string) => void;
     onBlur: () => void;
 }) {
+    const isAddButton = label === "지병" || label === "복용 약물";
+
     return (
         <View style={styles.itemRow}>
             <View style={styles.itemHeader}>
                 <Text style={styles.itemLabel}>{label}</Text>
                 <TouchableOpacity onPress={onEdit}>
-                    <Ionicons name="create-outline" size={16} color="#6B7280" />
+                    <Ionicons
+                        name={isAddButton ? "add" : "create-outline"}
+                        size={isAddButton ? 20 : 16}
+                        color="#6B7280"
+                    />
                 </TouchableOpacity>
             </View>
             {editable ? (
@@ -197,13 +262,9 @@ function EditableText({
 }
 
 const styles = StyleSheet.create({
-    root: { flex: 1, backgroundColor: "#F3F4F6" },
-    backButton: {
-        position: "absolute",
-        top: 20,
-        left: 16,
-        zIndex: 10,
-        padding: 8,
+    root: {
+        flex: 1,
+        backgroundColor: "#F9FAFB",
     },
     container: {
         paddingTop: 70,
@@ -211,34 +272,34 @@ const styles = StyleSheet.create({
         paddingBottom: 60,
     },
     title: {
-        fontSize: 22,
-        fontWeight: "bold",
-        color: "#1E3A8A",
-        marginBottom: 28,
+        fontSize: 24,
+        fontWeight: "700",
+        color: "#1D4ED8",
+        marginBottom: 32,
         textAlign: "center",
     },
     card: {
         backgroundColor: "#ffffff",
-        borderRadius: 20,
-        paddingVertical: 28,
-        paddingHorizontal: 20,
-        marginBottom: 24,
+        borderRadius: 24,
+        paddingVertical: 30,
+        paddingHorizontal: 24,
+        marginBottom: 28,
         alignItems: "center",
         shadowColor: "#000",
-        shadowOffset: { width: 0, height: 2 },
+        shadowOffset: { width: 0, height: 3 },
         shadowOpacity: 0.1,
-        shadowRadius: 6,
-        elevation: 3,
+        shadowRadius: 8,
+        elevation: 4,
     },
     rowWithEdit: {
         flexDirection: "row",
         alignItems: "center",
         justifyContent: "center",
         gap: 8,
-        marginBottom: 6,
+        marginBottom: 8,
     },
     userName: {
-        fontSize: 20,
+        fontSize: 22,
         fontWeight: "bold",
         color: "#111827",
     },
@@ -248,18 +309,18 @@ const styles = StyleSheet.create({
     },
     infoBox: {
         backgroundColor: "#ffffff",
-        borderRadius: 16,
-        paddingHorizontal: 20,
-        paddingVertical: 10,
-        marginBottom: 28,
+        borderRadius: 20,
+        paddingHorizontal: 24,
+        paddingVertical: 12,
+        marginBottom: 32,
         shadowColor: "#000",
-        shadowOffset: { width: 0, height: 1 },
+        shadowOffset: { width: 0, height: 2 },
         shadowOpacity: 0.05,
-        shadowRadius: 3,
-        elevation: 2,
+        shadowRadius: 4,
+        elevation: 3,
     },
     itemRow: {
-        paddingVertical: 14,
+        paddingVertical: 16,
         borderBottomWidth: 1,
         borderBottomColor: "#E5E7EB",
     },
@@ -267,32 +328,43 @@ const styles = StyleSheet.create({
         flexDirection: "row",
         justifyContent: "space-between",
         alignItems: "center",
-        marginBottom: 4,
+        marginBottom: 6,
     },
     itemLabel: {
-        fontSize: 13,
+        fontSize: 14,
+        fontWeight: "600",
         color: "#6B7280",
     },
     itemValue: {
-        fontSize: 15,
-        fontWeight: "600",
-        color: "#111827",
+        fontSize: 16,
+        fontWeight: "500",
+        color: "#1F2937",
     },
     itemInput: {
-        fontSize: 15,
-        fontWeight: "600",
-        color: "#111827",
-        paddingVertical: 2,
+        fontSize: 16,
+        fontWeight: "500",
+        color: "#1F2937",
+        paddingVertical: 6,
+        paddingHorizontal: 10,
+        borderRadius: 8,
+        borderWidth: 1,
+        borderColor: "#E5E7EB",
+        backgroundColor: "#F9FAFB",
     },
     saveButton: {
-        backgroundColor: "#D92B4B",
-        borderRadius: 10,
-        paddingVertical: 14,
+        backgroundColor: "#D92B4B", // 기존 빨간색 유지
+        borderRadius: 12,
+        paddingVertical: 16,
         alignItems: "center",
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.15,
+        shadowRadius: 4,
+        elevation: 4,
     },
     saveText: {
         color: "#ffffff",
-        fontWeight: "bold",
+        fontWeight: "700",
         fontSize: 16,
     },
 });

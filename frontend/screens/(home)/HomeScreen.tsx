@@ -1,84 +1,105 @@
-// 📄 screens/(home)/HomeScreen.tsx
-// 홈 화면입니다. 로그인된 사용자의 정보를 배너로 표시하며, 주요 기능으로 이동할 수 있는 버튼들을 제공합니다.
-
 import {
     View,
     Text,
     StyleSheet,
-    TouchableOpacity,
+    TouchableWithoutFeedback,
     ScrollView,
+    Animated,
 } from "react-native";
+import { useRef } from "react";
 import { router } from "expo-router";
 import { useQuery } from "@tanstack/react-query";
 
-import { useAuthStore } from "@/store/auth.store"; // 🔸 로그인된 사용자 상태 저장소 (Zustand)
-import { fetchCurrentUser } from "@/services/user.api"; // 🔸 서버에서 사용자 전체 프로필 조회 API
+import { useAuthStore } from "@/store/auth.store";
+import { fetchCurrentUser } from "@/services/user.api";
 import { toKoreanGender } from "@/utils/gender";
 
-
 export default function HomeScreen() {
-    const { user } = useAuthStore(); // ✅ 현재 로그인된 사용자(id, email 등)
+    const { user } = useAuthStore();
 
-    // 🔄 서버에서 최신 사용자 프로필 정보를 가져옴
     const { data: profile } = useQuery({
         queryKey: ["user", user?.id],
         queryFn: () => fetchCurrentUser(user!.id),
         enabled: !!user?.id,
     });
 
+    const cardItems = [
+        { label: "자가진단", icon: "🩺", link: "/(record)/symptom" },
+        { label: "건강 통계", icon: "📊" },
+        { label: "의료 도감", icon: "📖" },
+        { label: "기록 보기", icon: "🗂️", link: "/(tabs)/history" },
+    ];
+
     return (
         <ScrollView
             style={{ backgroundColor: "#ffffff" }}
-            contentContainerStyle={[styles.container, { flexGrow: 1 }]}
+            contentContainerStyle={styles.container}
         >
-            {/* 🔹 상단 텍스트 */}
-            <View style={styles.profileRow}>
-                <Text style={styles.profileText}>프로필</Text>
-            </View>
+            {/* 🔹 상단 제목 */}
+            <Text style={styles.title}>프로필</Text>
 
-            {/* 🔹 사용자 정보 배너 */}
+            {/* 🔹 프로필 배너 */}
             <View style={styles.banner}>
-                <Text style={styles.bannerTitle}>
-                    {profile?.age}세 {toKoreanGender(profile?.gender)} / {profile?.height}cm · {profile?.weight}kg
+                <Text style={styles.bannerTextBold}>
+                    {profile?.age}세 {toKoreanGender(profile?.gender)} /{" "}
+                    {profile?.height}cm · {profile?.weight}kg
                 </Text>
-                <Text style={styles.bannerSub}>
+                <Text style={styles.bannerText}>
                     지병:{" "}
                     {profile?.diseases?.length
-                        ? profile.diseases.map((d: { name: string }) => d.name).join(", ")
-                        : "없음"}{" "}
-                    | 약물:{" "}
-                    {profile?.medications?.length
-                        ? profile.medications.map((m: { name: string }) => m.name).join(", ")
+                        ? profile.diseases.map((d) => d.name).join(", ")
                         : "없음"}
                 </Text>
-                <TouchableOpacity
+                <Text style={styles.bannerText}>
+                    약물:{" "}
+                    {profile?.medications?.length
+                        ? profile.medications.map((m) => m.name).join(", ")
+                        : "없음"}
+                </Text>
+                <TouchableWithoutFeedback
                     onPress={() => router.push("/(user)/profile-detail")}
                 >
-                    <Text style={styles.startText}>자세히 보기 &gt;</Text>
-                </TouchableOpacity>
+                    <Text style={styles.linkText}>자세히 보기 &gt;</Text>
+                </TouchableWithoutFeedback>
             </View>
 
-            {/* 🔹 기능 타이틀 */}
+            {/* 🔹 기능 제목 */}
             <Text style={styles.sectionTitle}>기능</Text>
             <Text style={styles.sectionSub}>주요 기능들을 바로 확인해보세요</Text>
 
             {/* 🔹 기능 카드 */}
             <View style={styles.grid}>
-                {[
-                    { label: "자가진단", icon: "🩺", link: "/(record)/symptom" },
-                    { label: "건강 통계", icon: "📊" },
-                    { label: "의료 도감", icon: "📖" },
-                    { label: "기록 보기", icon: "🗂️", link: "/(tabs)/history" },
-                ].map((item, index) => (
-                    <TouchableOpacity
-                        key={index}
-                        style={styles.card}
-                        onPress={() => item.link && router.push(item.link)}
-                    >
-                        <Text style={styles.cardIcon}>{item.icon}</Text>
-                        <Text style={styles.cardLabel}>{item.label}</Text>
-                    </TouchableOpacity>
-                ))}
+                {cardItems.map((item, index) => {
+                    const scale = useRef(new Animated.Value(1)).current;
+
+                    const onPressIn = () => {
+                        Animated.spring(scale, {
+                            toValue: 0.95,
+                            useNativeDriver: true,
+                        }).start();
+                    };
+
+                    const onPressOut = () => {
+                        Animated.spring(scale, {
+                            toValue: 1,
+                            useNativeDriver: true,
+                        }).start();
+                    };
+
+                    return (
+                        <TouchableWithoutFeedback
+                            key={index}
+                            onPressIn={onPressIn}
+                            onPressOut={onPressOut}
+                            onPress={() => item.link && router.push(item.link)}
+                        >
+                            <Animated.View style={[styles.card, { transform: [{ scale }] }]}>
+                                <Text style={styles.cardIcon}>{item.icon}</Text>
+                                <Text style={styles.cardLabel}>{item.label}</Text>
+                            </Animated.View>
+                        </TouchableWithoutFeedback>
+                    );
+                })}
             </View>
         </ScrollView>
     );
@@ -86,72 +107,76 @@ export default function HomeScreen() {
 
 const styles = StyleSheet.create({
     container: {
-        paddingVertical: 20,
-        paddingHorizontal: 16,
+        paddingTop: 40,
+        paddingBottom: 80,
+        paddingHorizontal: 20,
         backgroundColor: "#ffffff",
     },
-    profileRow: {
-        marginBottom: 24,
-    },
-    profileText: {
-        fontSize: 18,
-        fontWeight: "bold",
+    title: {
+        fontSize: 22,
+        fontWeight: "800",
         color: "#111827",
+        marginBottom: 20,
     },
     banner: {
         backgroundColor: "#EEF2FF",
-        borderRadius: 12,
         padding: 20,
-        marginBottom: 24,
+        borderRadius: 20,
+        marginBottom: 32,
     },
-    bannerTitle: {
-        fontSize: 18,
-        fontWeight: "bold",
-        color: "#3730A3",
-        marginBottom: 6,
+    bannerTextBold: {
+        fontSize: 16,
+        fontWeight: "700",
+        color: "#1E3A8A",
+        marginBottom: 8,
     },
-    bannerSub: {
+    bannerText: {
         fontSize: 14,
-        color: "#4B5563",
-        marginBottom: 10,
+        color: "#374151",
     },
-    startText: {
-        color: "#3B82F6",
-        fontWeight: "bold",
+    linkText: {
+        fontSize: 14,
+        fontWeight: "600",
+        color: "#2563EB",
+        marginTop: 12,
     },
     sectionTitle: {
-        fontSize: 16,
-        fontWeight: "bold",
-        marginBottom: 4,
+        fontSize: 18,
+        fontWeight: "700",
         color: "#111827",
+        marginBottom: 4,
     },
     sectionSub: {
         fontSize: 13,
         color: "#6B7280",
-        marginBottom: 12,
+        marginBottom: 20,
     },
     grid: {
         flexDirection: "row",
         flexWrap: "wrap",
         justifyContent: "space-between",
-        gap: 12,
+        rowGap: 16,
+        columnGap: 10,
     },
     card: {
         width: "47%",
-        height: 100,
-        backgroundColor: "#F9FAFB",
-        borderRadius: 10,
+        aspectRatio: 1,
+        backgroundColor: "#ffffff",
+        borderRadius: 16,
         justifyContent: "center",
         alignItems: "center",
-        marginBottom: 12,
-        elevation: 1,
+        elevation: 4,
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.08,
+        shadowRadius: 4,
     },
     cardIcon: {
-        fontSize: 24,
+        fontSize: 28,
         marginBottom: 6,
     },
     cardLabel: {
-        fontSize: 14,
+        fontSize: 15,
         fontWeight: "600",
         color: "#111827",
     },

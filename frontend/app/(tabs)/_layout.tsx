@@ -8,46 +8,46 @@ import { Tabs } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 
 export default function TabsLayout() {
-  return (
-    <Tabs
-      screenOptions={{
-        headerShown: false, // 상단 헤더 숨김
-        tabBarActiveTintColor: "#2563eb", // 활성 탭 색상 (Tailwind: blue-600)
-        tabBarLabelStyle: { fontSize: 12 },
-      }}
-    >
-      {/* 홈 탭 */}
-      <Tabs.Screen
-        name="home"
-        options={{
-          title: "홈",
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="home-outline" color={color} size={size} />
-          ),
-        }}
-      />
-
-      {/* 기록 탭 */}
-      <Tabs.Screen
-        name="history"
-        options={{
-          title: "기록",
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="document-text-outline" color={color} size={size} />
-          ),
-        }}
-      />
-
-      {/* 설정 탭 */}
-      <Tabs.Screen
-        name="setting"
-        options={{
-          title: "설정",
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="settings-outline" color={color} size={size} />
-          ),
-        }}
-      />
-    </Tabs>
-  );
+    return (
+        <Tabs
+            screenOptions={{
+                headerShown: false,
+                tabBarActiveTintColor: "#2563eb",
+                tabBarLabelStyle: { fontSize: 12 },
+                tabBarLabelPosition: "below-icon", // ✅ 아이콘 아래 텍스트
+                tabBarStyle: {
+                    height: 61, // ✅ 탭 바 높이 늘려서 텍스트 짤림 방지
+                    paddingBottom: 8, // ✅ 아래 여백도 주면 더 깔끔
+                },
+            }}
+        >
+            <Tabs.Screen
+                name="home"
+                options={{
+                    title: "홈",
+                    tabBarIcon: ({ color, size }) => (
+                        <Ionicons name="home-outline" color={color} size={22} />
+                    ),
+                }}
+            />
+            <Tabs.Screen
+                name="history"
+                options={{
+                    title: "기록",
+                    tabBarIcon: ({ color, size }) => (
+                        <Ionicons name="document-text-outline" color={color} size={22} />
+                    ),
+                }}
+            />
+            <Tabs.Screen
+                name="setting"
+                options={{
+                    title: "설정",
+                    tabBarIcon: ({ color, size }) => (
+                        <Ionicons name="settings-outline" color={color} size={22} />
+                    ),
+                }}
+            />
+        </Tabs>
+    );
 }
